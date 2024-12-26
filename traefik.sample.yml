@@ -114,38 +114,38 @@ entryPoints:
 ################################################################
 
 # Enable ping
-#ping:
+ping:
   # Name of the related entry point
   #
   # Optional
   # Default: "traefik"
   #
-#  entryPoint: traefik
+  entryPoint: traefik
 
 ################################################################
 # Docker configuration backend
 ################################################################
 
-#providers:
+providers:
   # Enable Docker configuration backend
-#  docker:
+ docker:
     # Docker server endpoint. Can be a tcp or a unix socket endpoint.
     #
     # Required
     # Default: "unix:///var/run/docker.sock"
     #
-#    endpoint: tcp://10.10.10.10:2375
+    endpoint: unix:///var/run/docker.sock
 
     # Default host rule.
     #
     # Optional
     # Default: "Host(`{{ normalize .Name }}`)"
     #
-#    defaultRule: Host(`{{ normalize .Name }}.docker.localhost`)
+    defaultRule: Host(`{{ normalize .Name }}.sidepiece.rip`)
 
     # Expose containers by default in traefik
     #
     # Optional
     # Default: true
-    #
-#    exposedByDefault: false
+    
+    exposedByDefault: true

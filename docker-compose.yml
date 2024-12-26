@@ -11,26 +11,49 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro  # Updated to YAML
-      - ./config/traefik/acme.json:/acme.json
+      - /mnt/development/Server/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - traefik-ssl:/ssl  # New named volume for certificates
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
       - CF_API_KEY=${CF_API_KEY}
+      - DOMAIN=${DOMAIN}
     networks:
       - traefik_proxy
     labels:
       - "traefik.enable=true"
       # Dashboard
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.rule=Host(`net.${DOMAIN}`)"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
-      # Global redirect to HTTPS
-      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
-      - "traefik.http.routers.http-catchall.entrypoints=web"
-      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+      # Define dashboard-specific auth
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${BASIC_AUTH}"
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    networks:
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`deploy.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=cloudflare"
+      # Removed the auth middleware from portainer
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
 networks:
   traefik_proxy:
     external: true
+
+volumes:
+  portainer_data:
+  traefik-ssl:
