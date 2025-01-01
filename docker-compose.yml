@@ -11,31 +11,26 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /mnt/development/Server/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - traefik-ssl:/ssl  # New named volume for certificates
+      - ./traefikk.yml:/etc/traefik/traefik.yml:ro
+      - ./acme.json:/acme.json
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
       - CF_API_KEY=${CF_API_KEY}
-      - DOMAIN=${DOMAIN}
     networks:
-      - traefik_proxy
+      - proxy
     labels:
       - "traefik.enable=true"
-      # Dashboard
-      - "traefik.http.routers.dashboard.rule=Host(`net.${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.rule=Host(`net.sidepiece.rip`)"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
-      # Define dashboard-specific auth
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${BASIC_AUTH}"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${BASIC_AUTH}"
 
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: unless-stopped
-    ports:
-      - "9000:9000"
     security_opt:
       - no-new-privileges:true
     volumes:
@@ -43,17 +38,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
     networks:
-      - traefik_proxy
+      - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.portainer.rule=Host(`deploy.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.rule=Host(`deploy.sidepiece.rip`)"
       - "traefik.http.routers.portainer.entrypoints=websecure"
       - "traefik.http.routers.portainer.tls.certresolver=cloudflare"
-      # Removed the auth middleware from portainer
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
 networks:
-  traefik_proxy:
+  proxy:
     external: true
 
 volumes:
